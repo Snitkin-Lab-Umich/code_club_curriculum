@@ -1,0 +1,190 @@
+---
+title: "Rmarkdown tutorial key"
+author: "Genevieve Chiara"
+date: "10/12/2021"
+output: html_document
+---
+
+# PRACTICE 4
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=8, fig.height=10,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+You should have include=FALSE in the chunk option of this global chunk in order to hide the global chunk itself from the output.
+
+# PRACTICE 1  
+
+# **Iris Dataset**
+
+## _Variables_
+
+1. Sepal.Length
+  - numeric
+2. Sepal.Width
+  - numeric
+3. Petal.Length
+  - numeric
+4. Petal.Width
+  - numeric
+5. Species
+  - Factor w 3 levels
+
+
+[Click here to learn more about the Iris plant.](https://en.wikipedia.org/wiki/Iris_(plant))
+
+
+![iris plant](Iris.jpeg)   
+
+
+# PRACTICE 2:  
+
+# Plot
+
+```{r load libraries}
+library(ggplot2)
+library(tidyverse)
+```
+
+```{r read in datasets}
+data("iris")
+```
+
+```{r}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width, color=Species)) + geom_point()
+```
+  
+# PRACTICE 3:  
+
+# Plot with Options
+Use echo=FALSE to avoid having the code itself shown.
+Use results="hide" to avoid having any results printed.
+Use eval=FALSE to have the code shown but not evaluated.
+Use warning=FALSE and message=FALSE to hide any warnings or messages produced.
+Use fig.height and fig.width to control the size of the figures produced (in inches).  
+
+```{r fig.cap= "Figure 1. This plot gives Sepal Width by Sepal Length, with Species distinguished by color.", fig.height=8, fig.width=10}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width, color=Species)) + geom_point()
+```
+
+### Results from Figure 1  
+
+You can write an analysis of your plot right after the code chunk, in order to clearly state your interpretation of your results.   
+
+# PRACTICE 5  
+
+## Using in-line R code
+
+ Option 1:  The average petal length across all species is `r mean(iris$Petal.Length)`.
+ 
+ Option 2:  
+ 
+```{r echo=FALSE}
+avg<-iris%>%group_by(Species)%>%summarise(mean(Petal.Length))
+```
+The average petal length for `r avg[2,1]`   is  `r avg[2,2]`.  
+This might be useful if you have many groups and don't want to copy&paste the resulting numbers each time.  
+
+With in-line r code, the results are always displayed, but never the code. They do not take knitr options.
+
+# PRACTICE 6  
+```{r}
+library(knitr)
+kable(iris[1:5,], caption="Iris table")
+```
+
+# PRACTICE 7  
+
+# Interactive Tabset
+```{r}
+library(DT)
+iris_table<-datatable(iris, options = list(pageLength = 5))
+```
+
+
+## Iris Data {.tabset}
+
+### Data Table  
+`r iris_table`  
+
+### Data Descripion
+1. Sepal.Length
+  - numeric
+2. Sepal.Width
+  - numeric
+3. Petal.Length
+  - numeric
+4. Petal.Width
+  - numeric
+5. Species
+  - Factor w 3 levels  
+  
+# Interactive   
+
+```{r echo=FALSE, include=FALSE}
+library(rvest) 
+website <- read_html("https://en.wikipedia.org/wiki/COVID-19_pandemic_by_country_and_territory") 
+library('dplyr')
+covid_tables <- website %>% html_table() # retrieves all of the tables 
+covid_table_10 <- covid_tables[[10]]     
+covid_table_10<-subset(covid_table_10, select=c(2:5))
+ library(janitor)
+covid_table_10 <- covid_table_10 %>% clean_names()
+str(covid_table_10)
+library(tidyverse)
+covid_table_10[,c(2:4)]  <- apply(X = covid_table_10[, -c(1)], MARGIN = 2, FUN = parse_number) 
+view(covid_table_10)
+str(covid_table_10)
+library(plotly)
+plotly::plot_ly(x = covid_table_10$cases, y = covid_table_10$deaths, type = "scatter", mode = 'markers', color = covid_table_10$country)  %>%
+  layout(title = "Reported Cases vs Deaths by Country", 
+         xaxis=list(title = "Reported Cases"), 
+         yaxis = list(title = "Reported Deaths"), 
+         #legend = list(orientation = 'h'), 
+         plot_bgcolor = "Black", 
+         paper_bgcolor = 'Black', 
+         font = list(color = "White") 
+  ) %>% 
+  hide_legend()
+plotly::plot_ly(x = log(covid_table_10$cases), y = log(covid_table_10$deaths), type = "scatter", mode = 'markers', color = covid_table_10$country)  %>%
+  layout(title = "Reported Cases vs Deaths by Country", 
+         xaxis=list(title = "Reported Cases"), 
+         yaxis = list(title = "Reported Deaths"), 
+         #legend = list(orientation = 'h'), 
+         plot_bgcolor = "Black", 
+         paper_bgcolor = 'Black', 
+         font = list(color = "White") 
+  ) %>% 
+  hide_legend()
+covid_table_10 <- covid_table_10[complete.cases(covid_table_10),]
+image_file <- "/Users/genevievechiara/Documents/Snitkin_Lab/codeclub/Session_6/Iris.jpeg"  # <- insert your image path
+txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
+```
+
+```{r echo=FALSE}
+plot_ly(covid_table_10, x = ~log(deaths), y = ~log(cases), z = ~deaths_million, color = ~country)  %>%
+  layout(title = "Reported Cases vs Deaths vs Deaths/Million by Country", 
+         scene = list(title = "Reported Deaths"), 
+         yaxis = list(title = "Reported Cases"), 
+         zaxis = list(title = "Deaths/Million"), 
+         images = list(
+           list(
+             # Add images
+             source =  paste('data:image/png;base64', txt, sep=','),
+             xref = "x",
+             yref = "y",
+             x = 0.2,
+             y = 3,
+             sizex = 3,
+             sizey = 3,
+             sizing = "stretch",
+             opacity = 0.4,
+             layer = "below"
+           )
+         )) %>% 
+  hide_legend()
+
+```
+
+
+### [Additional help for interactivity options (highcharter, plotly, datatables)](http://www.htmlwidgets.org/showcase_highcharts.html)  

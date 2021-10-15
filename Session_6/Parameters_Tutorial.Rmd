@@ -1,0 +1,52 @@
+---
+title: "Parameters Tutorial"
+author: "Genevieve Chiara"
+date: "10/14/2021"
+output: html_document
+  params:
+  year: 2002
+---
+
+# Parameters
+
+Setting parameters in the header is a really handy tool for when you have multiple datasets that you want to run the same code on, or when you want to change out the year, region, etc. The "params:" option in the header creates a param object, from which you can later call your variable/file of interest. For an example I will use the Gapminder dataset.
+
+```{r echo=FALSE, include=FALSE}
+#install.packages("yaml")
+library(yaml)
+library(rmarkdown)
+library(tidyverse)
+#install.packages("gapminder")
+library(gapminder)
+data("gapminder")
+View(gapminder)
+```
+
+Maybe you want to filter your dataset like so:
+
+```{r echo=FALSE}
+gapminder%>%
+  filter(year==2002)%>%
+  head()
+```
+
+But later on you want to be able to run the same analysis for a different year:
+
+```{r echo=FALSE}
+gapminder%>%
+  filter(year== params$year)%>%
+  head()
+```
+
+Can also use params when making a plot:
+
+```{r echo=FALSE}
+gapminder%>%
+  filter(year== params$year)%>%
+  ggplot(aes(x=gdpPercap, y = lifeExp, size=pop, color=continent)) + geom_point() +
+  labs(title = paste ("Life Expectancy and GDP for", params$year), x="GDP Per Capita", y="Life Expectancy")
+```
+
+Finally, add a title to your main section containing these plots with in-line code:
+
+## Gapminder Analysis for `r params$year`
