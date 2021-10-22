@@ -1,0 +1,131 @@
+
+## Part 4: Subset Tree Based on Characteristic of Interest (Sequence Type)
+```{r}
+#Import CRKP Metadata
+CRKP_metadata <- as.data.frame(read_xlsx('~/Desktop/Session_7/CRKP_CC_metadata.xlsx'))
+
+#Exercise: 
+  #1. What are the variables in the metatadata dataframe?
+  names(CRKP_metadata)
+  #2. How many isolates are in the metatadata dataframe?
+  nrow(CRKP_metadata)
+  #3. Does the number of isolates in the metatadata dataframe match the number of isolates in the phylogeny? 
+  nrow(CRKP_metadata) == tree$Nnode
+  #4. Does the rownames of the metadata dataframe match the tip labels for the tree? 
+  rownames(CRKP_metadata)
+  head(tree_final$tip.label)
+  
+#Create rownames for sorting of the dataframe
+  #Question: Why 
+  head(CRKP_metadata)
+  rownames(CRKP_metadata) <- paste0("PCMP_H",CRKP_metadata$isolate_no)
+
+#Subset and sort using match function
+CRKP_metadata_final <- as.data.frame(CRKP_metadata[match(as.vector(tree_final$tip.label), row.names(CRKP_metadata)), ])
+
+#Question: If this is a core SNP aligned phylogeny why might this be difficult to interpret?
+
+#Question: What is the distribution of sequence types within the dataset?
+table(CRKP_metadata_final$ST)
+
+# Add Tips to the Tree
+  #Creaste Tip for Sequence Type
+  ST_tip <- c(CRKP_metadata_final$ST,rep(NA,tree_final$Nnode))
+  #Visualize Tree with Sequence Type as Tips 
+  ggtree(tree_final) +  geom_tippoint(aes(color=ST_tip,legend_title="Sequence Types"))
+  #Question: How is sequence type distributed across the phylogeny?
+```
+## Part 5: Subset Tree Based on Characteristic of Interest (Sequence Type)
+```{r}
+#Subset the Tree to Include Only ST 258 isolates
+  # Master 258 Dataset
+  CRKP_master_258 <- subset(CRKP_metadata_final,ST == "258")
+  # Tree for ST 258 Only
+  tree_258 <- drop.tip(tree_final,tree_final$tip.label[!tree_final$tip.label %in% rownames(CRKP_master_258)])
+  # Sort Dataset by Tip Label
+  CRKP_master_258_sorted <- CRKP_master_258[match(tree_258$tip.label, rownames(CRKP_master_258)), ]
+
+# Visualize ST258 Phylogeny
+ggtree(tree_258)
+
+# Change Layout
+  #Default
+  ggtree(tree_258,layout = "rectangular")
+  #Circular
+  ggtree(tree_258,layout = "circular")
+  #Slanted
+  ggtree(tree_258,layout = "slanted")
+  #No Branch Length
+  ggtree(tree_258,layout="rectangular",branch.length = 'none')
+
+#Exercise 1: Create a Tip Label for Source 
+  #1. How many LTACHs do we have?
+  table(CRKP_master_258_sorted$source)
+  #2. Create tip for Source
+  source <- c(CRKP_master_258_sorted$source,rep(NA,tree_258$Nnode))
+  #3. Visualize
+  ggtree(tree_258) +  geom_tippoint(aes(color=source,legend_title="Source"))
+  #4. Store as tree_258_source
+  tree_258_source <- ggtree(tree_258) +  geom_tippoint(aes(color=source,legend_title="Source"))
+#Exercise 2: Create a tip label for Colistin Resistance?
+  #1. What regions are there?
+  table(CRKP_master_258_sorted$CST_dich)
+  #2. Create tip for region
+  Colistin <- c(CRKP_master_258_sorted$CST_dich,rep(NA,tree_258$Nnode))
+  #3. Visualize and improve size
+  ggtree(tree_258) +  geom_tippoint(aes(color=Colistin,legend_title="Colistin Resistance"),size=3)
+
+#Exercise 3: Change the shape of the tip label? 
+  ggtree(tree_258) +  geom_tippoint(aes(color=LTACH_258_tip,shape=Colistin,legend_title="Region"),size=3)
+```
+
+## Part 6: Visualization Using gheatmap 
+```{r}
+#gheatmap Help Page
+help(gheatmap)
+
+#Initial gheatmap of Colistin Resistance
+gheatmap(ggtree(tree_258),CRKP_master_258_sorted %>% select(CST_dich))+ ylim(NA, 450) 
+
+#Formatting of gheatmap
+  #Change Heatmap Structure 
+  gheatmap(ggtree(tree_258), CRKP_master_258_sorted %>% select(CST_dich) %>% `colnames<-`(c("Colistin")), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + ylim(NA, 450)
+  #Change Heatmap Fill Color
+  gheatmap(ggtree(tree_258), CRKP_master_258_sorted %>% select(CST_dich) %>% `colnames<-`(c("Colistin")), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) 
+  + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + ylim(NA, 450)
+  #Change Legend Information Using Theme 
+  gheatmap(ggtree(tree_258), CRKP_master_258_sorted %>% select(CST_dich) %>% `colnames<-`(c("Colistin")), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8)) + ylim(NA, 450)  
+  
+#Exercise: Add gheatmap to Stored ST258 Phylogeny That had Source Tips
+    #Hint: The format for gheatmap is gheatmap(phylogeny,data, ...)
+  gheatmap(tree_258_source, CRKP_master_258_sorted %>% select(CST_dich) %>% `colnames<-`(c("Colistin")), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8)) + ylim(NA, 450)  
+```
+
+## Part 7: Using ggnewscale to plot heatmap with variables that have different data structures
+```{r}
+#Exercise: Plot source and resistance (CST_dich)in the same gheatmap
+gheatmap(ggtree(tree_258),CRKP_master_258_sorted %>% select(source,CST_dich))+ ylim(NA, 450)
+  #Question: What is wrong about the figure above? How can you fix it? 
+
+#Introducing ggnewscale!
+library(ggnewscale)
+help("ggnewscale")
+
+#Generate of Unique Colors
+  #Load randomcoloR package
+  library(randomcoloR)
+  #Generate Distinct Color Palette
+  palette_source <- distinctColorPalette(4)
+  #View Color Palette Chosen
+  pie(rep(1,length(palette_source)),col=palette_source)
+
+#Generate Multi-Column Heatmap Using ggnewscale
+  #Phylogeny with Source Heatmap Column
+  p1 <- gheatmap(ggtree(tree_258),CRKP_master_258_sorted %>% select(source),colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=6) + scale_fill_manual(values=palette_source,name="Source")  + ylim(NA,450)
+  p1
+  #Use new_scale_fill to add option
+  p2 <- p1 + new_scale_fill()
+  #Add Resistance Column to Heatmap
+  p3 <- gheatmap(p2, CRKP_master_258_sorted %>% select(CST_dich) %>% `colnames<-`(c("Colistin")),colnames_position="top",colnames_angle=90,colnames_offset_y=0.25,width=.05,hjust=0,font.size=6,offset=.0000018)  + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8))+ geom_treescale(x=0,y=-10,offset=1)   + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + ylim(NA, 450)
+  p3
+```

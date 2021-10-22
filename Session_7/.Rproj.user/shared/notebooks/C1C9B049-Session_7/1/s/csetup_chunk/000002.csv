@@ -1,0 +1,7 @@
+"0","require(knitr)"
+"2","Loading required package: knitr
+"
+"0","knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE) "
+"0","knitr::opts_chunk$set(fig.width = 20, fig.height = 9.5)"
+"0","knitr::opts_chunk$set(comment = NA)"
+"0","knitr::opts_knit$set(root.dir=""~/Documents/Session_7/"")"

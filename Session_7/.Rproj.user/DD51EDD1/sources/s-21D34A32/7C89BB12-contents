@@ -1,0 +1,225 @@
+---
+title: "Code Club Session 7"
+author: "Kyle Gontjes"
+date: "10/21/2021"
+output: html_document
+---
+
+## R Markdown Setup Chunk
+```{r setup}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.width = 20, fig.height = 9.5)
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(root.dir="~/Desktop/gl_mount")
+```
+
+## Agenda
+0. Set up the R Environment
+1. Load the .treefile into R Environment
+2. Perform Initial Visualization of the Phylogeny Using the ggtree Package
+3. Clean the Phylogeny by Removing Tips and Midpoint Rooting
+4. Explore Whether Subseting Tree Based on Sequence Type of Interest is Valuable
+5. Subset Tree Based on Sequence Type
+6. Visualize Colistin Resistance Using Gheatmap
+7. Using ggnewscale to plot heatmap with variables that have different data structures
+
+## Part 0: Set up the R Environment
+```{r}
+# Packages used 
+  # Cran R packages
+  cran_packages <- c("BiocManager","phytools","ggplot2","tidyverse","readxl","randomcoloR","cowplot")
+  # BiocManager packages
+  BiocManager_packages <- c("ggtree","ggnewscale")
+  
+# Functions to install packages (if not installed already)
+  # lapply(cran_packages,install.packages,character.only=T)
+  # lapply(BiocManager_packages,BiocManager::install,character.only=T)
+
+# Functions to load packages
+lapply(cran_packages,library,character.only=T)
+lapply(BiocManager_packages,library,character.only=T)
+```
+
+## Part 1: Load the .treefile into R Environment
+```{r}
+# Load .treefile using the ape package ()
+tree <- read.tree(file="/Users/kyle/Documents/Session_7/2021_02_12_08_34_28_KPNIH1_genome_aln_w_alt_allele_unmapped.treefile")
+
+# Question: What type of object is the .treefile?
+class(tree)
+
+# View tree object in R
+# View(tree)
+```
+
+## Part 2: Perform Initial Visualization of the tree Using ggtree
+#### See the ggtree full vignette at https://yulab-smu.top/treedata-book/ 
+```{r}
+# Access the ggtree vignette
+vignette("ggtree")
+
+# Visualize tree object using the ggtree function
+  # Help page documentation for ggtree function
+  help(ggtree)
+  # Use ggtree function to view phylogeny
+  ggtree(tree)
+
+# Exercise: Add a (1) treescale using geom_treescale and (2) overlay a title using a ggplot2 functions 
+ggtree(tree) + geom_treescale(x=0,y=-10,offset=1) + ggtitle("Initial Phylogeny")
+  
+# Question: After adding the scale to the phylogeny, what are your takeaways? Does this tell you anything about the genomic diversity of the isolates used in the tree? 
+```
+
+## Part 3: Clean the Phylogeny by (1) Removing Tips and (2) Performing Midpoint Rooting
+```{r}
+# Exercise: Identify the location of the tip labels for this tree
+# View(ggtree)
+head(tree$tip.label)
+
+# Drop Reference group using the treeio package's drop.tip function
+tree_wo_root <- treeio::drop.tip(tree,'gi_661922017_gb_CP008827.1_')
+
+# View tree without reference group
+ggtree(tree_wo_root)  + ggtitle("Tree Without the Reference Group")
+
+# Question: Would midpoint rooting be valuable for this phylogeny? 
+
+# Midpoint root using phytools rooting tool
+tree_final <- phytools::midpoint.root(tree_wo_root)
+
+# View midpoint rooted tree again
+ggtree(tree_final)  + ggtitle("Midpoint Rooted Tree")
+
+# Question: What is the difference in the tree_wo_root and tree_final? 
+  # Plot the ggtree images side-by-side using the cowplot package's plot_grid function
+  plot_grid(ggtree(tree_wo_root), ggtree(tree_final), ncol=2,labels = c('Without Rooting','Midpoint Root'))
+```
+
+## Part 4: Explore Whether Subseting Tree Based on Sequence Type of Interest is Valuable
+```{r}
+# Import CRKP Metadata
+CRKP_metadata <- as.data.frame(read_xlsx('~/Documents/Session_7/CRKP_metadata.xlsx'))
+
+# Exercise: Characterize the dataset
+  #1. What are the variables in this dataframe?
+  names(CRKP_metadata)
+  #2. How many isolates are in this dataframe?
+    #Hint: Each row = a unique isolate
+  nrow(CRKP_metadata)
+  #3. Does the number of isolates in the metadata dataframe equal the number of isolates in the phylogeny?
+  nrow(CRKP_metadata) == tree$Nnode
+  #4. Does the rownames of the dataframe match the tiplabels in the tree? 
+  rownames(CRKP_metadata)
+  head(tree_final$tip.label)
+
+# Create rownames for sorting the dataframe to match the tiplabels of the tree
+rownames(CRKP_metadata) <- paste0("PCMP_H",CRKP_metadata$isolate_no)
+  
+# Subset and sort the dataframe using the match function
+CRKP_metadata_final <- as.data.frame(CRKP_metadata[match(as.vector(tree_final$tip.label), row.names(CRKP_metadata)), ])
+
+# Question: What is the distribution of sequence types within the dataset? 
+table(CRKP_metadata_final$ST)
+
+# Add tips to the tree to visualize distribution of sequence types across the phylogeny
+  #Create tip for sequence type
+  ST_tip <- c(CRKP_metadata_final$ST,rep(NA,tree_final$Nnode))
+  #Visualize tree with sequence type as tips 
+  ggtree(tree_final) +  geom_tippoint(aes(color=ST_tip,legend_title="Sequence Types"))
+  #Question: How is sequence type distributed across the phylogeny?
+```
+
+## Part 5: Subset Tree Based on Sequence Type
+```{r}
+# Subset the tree to include only ST258 isolates
+  # Create ST258 dataframe
+  CRKP_258 <- subset(CRKP_metadata_final,ST == "258")
+  # Subset phylogeny to include only ST258 isolates
+  tree_258 <- drop.tip(tree_final,tree_final$tip.label[!tree_final$tip.label %in% rownames(CRKP_258)])
+  # Sort dataframe by tip label
+  CRKP_258_sorted <- CRKP_258[match(tree_258$tip.label, rownames(CRKP_258)), ] 
+  
+# Visualize ST258 phylogeny
+ggtree(tree_258)
+
+# Visualize ST258 phylogeny using different layouts
+  # Default
+  ggtree(tree_258,layout = "rectangular")
+  # Circular
+  ggtree(tree_258,layout = "circular")
+  # Slanted
+  ggtree(tree_258,layout = "slanted")
+  # No Branch Length
+  ggtree(tree_258,layout="rectangular",branch.length = 'none')
+
+# Exercise 1: Create a tiplabel for Source
+  # 1. Tabulate source data
+  table(CRKP_258_sorted$Source)
+  # 2. Create tip for Source
+  Source_tip <- c(CRKP_258_sorted$Source,rep(NA,tree_258$Nnode))
+  # 3. Visualize
+  ggtree(tree_258) +  geom_tippoint(aes(color=Source_tip),size=2) + labs(color="Source")
+  # 4. Store as tree_258_source
+  tree_258_source <- ggtree(tree_258) +  geom_tippoint(aes(color=Source_tip),size=2) + labs(color="Source")
+  
+# Exercise 2: Create a tip label for Colistin Resistance
+  # 1. What regions are there?
+  table(CRKP_258_sorted$Colistin)
+  # 2. Create tip for region
+  Colistin <- c(CRKP_258_sorted$Colistin,rep(NA,tree_258$Nnode))
+  # 3. Visualize and improve size
+  ggtree(tree_258) +  geom_tippoint(aes(color=Colistin,legend_title="Colistin Resistance"),size=3)
+
+# Exercise 3: Create a phylogeny with geom_tippoint (1) color = source and (2) shape = colistin resistance
+  ggtree(tree_258) +  geom_tippoint(aes(color=Source_tip,shape=Colistin,legend_title="Region"),size=3)+ labs(color="Source")
+```
+
+## Part 6: Visualize colistin Resistance Using gheatmap
+```{r}
+# gheatmap Help Page
+help(gheatmap)
+
+# Initial gheatmap of Colistin Resistance
+gheatmap(ggtree(tree_258),CRKP_258_sorted %>% select(Colistin))+ ylim(NA, 450) 
+
+# Stepwise formatting of gheatmap
+  # Change Heatmap Structure: Angle, Offset, Width, Justification, and Font Size
+  gheatmap(ggtree(tree_258), CRKP_258_sorted %>% select(Colistin), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + ylim(NA, 450)
+  # Change Heatmap Fill Color and Legend Name: scale_fill_manual
+  gheatmap(ggtree(tree_258), CRKP_258_sorted %>% select(Colistin), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + ylim(NA, 450)
+  # Change Legend Information: Theme 
+  gheatmap(ggtree(tree_258), CRKP_258_sorted %>% select(Colistin), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8)) + ylim(NA, 450)  
+
+# Exersise: Add stored ST258 phylogeny that has source tips to the gheatmap function created above
+  # Hint: Format of gheatmap function = gheatmap(phylogeny, data, ...)
+  gheatmap(tree_258_source, CRKP_258_sorted %>% select(Colistin), colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=5) + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8)) + ylim(NA, 450)   
+```
+
+## Part 7: Using ggnewscale to plot heatmap with variables that have different data structures
+```{r}
+#Exercise: Plot source and resistance (CST_dich)in the same gheatmap
+gheatmap(ggtree(tree_258),CRKP_258_sorted %>% select(Source,Colistin))+ ylim(NA, 450)
+  #Question: What is 'wrong' about the figure above? How can you fix it? 
+
+#Introducing ggnewscale!
+help("ggnewscale")
+
+# Generate of Unique Colors
+  # Introducing randomcoloR::distinctColorPalette
+  ??randomcoloR::distinctColorPalette
+  # Generate Distinct Color Palette
+  palette_source <- distinctColorPalette(4)
+  # View Color Palette Chosen
+  pie(rep(1,length(palette_source)),col=palette_source)
+
+# Generate Heatmap Using ggnewscale
+  # Phylogeny with Source Heatmap Column
+  p1 <- gheatmap(ggtree(tree_258),CRKP_258_sorted %>% select(Source),colnames_position="top", colnames_angle=90, colnames_offset_y=0.25, width=.05,hjust=0,font.size=6) + scale_fill_manual(values=palette_source,name="Source") + ylim(NA,450)
+  print(p1)
+  #Use new_scale_fill to add optionc 
+  p2 <- p1 + new_scale_fill()
+  #Add Resistance Column to Heatmap
+  p3 <- gheatmap(p2, CRKP_258_sorted %>% select(Colistin), colnames_position="top",  colnames_angle=90, colnames_offset_y=0.25, width=.05, hjust=0, font.size=6, offset=.0000018)  + theme(legend.position ='bottom',legend.key = element_rect(colour=c('black')), legend.direction="horizontal",legend.title = element_text(size=14),legend.text = element_text(size=8))+ geom_treescale(x=0,y=-10,offset=1)   + scale_fill_manual(values=c("black","white"),name="Resistance Profile") + ylim(NA, 450)
+  print(p3)
+```

@@ -1,0 +1,119 @@
+# Session_7 Dataset Creation Script
+
+# Load Patient Metadata
+setwd("~/Desktop/gl_mount/")
+
+# Packages Used 
+# Cran R Packages
+cran_packages <- c("BiocManager","phytools","ggplot2","tidyverse","readxl","randomcoloR","cowplot")
+# BiocManager Packages
+BiocManager_packages <- c("ggtree","ggnewscale")
+
+# Functions to Load Packages
+lapply(cran_packages,library,character.only=T)
+lapply(BiocManager_packages,library,character.only=T,quietly=T)
+
+
+# Tree File
+tree <- read.tree(file='./2021_02_12_08_34_28_KPNIH1_genome_aln_w_alt_allele_unmapped.treefile')
+# Remove Reference Genome (KPNIH1 Complete Genome: BioProject accession = PRJNA73191)
+tree_final <- midpoint.root(drop.tip(tree,'gi_661922017_gb_CP008827.1_'))
+# Remove Isolates 472 and 473 Due to Missing Clinical or SENSITITRE Data
+tree_final <- drop.tip(tree_final,c("PCMP_H472","PCMP_H473"))
+
+# MLST Data from ARIBA
+MLST <- as.data.frame(read.delim(file='./Analysis/Antibiotic_resistance/data/mlst.tsv',sep='\t'))
+# Generate Tip Name and Isolate Number from MLST Sample ID for Dataset Merging
+MLST$isolate_no <- gsub('./mlst/PCMP_H','',MLST$Sample) #Isolate Number
+MLST$tip_name <- gsub('./mlst/','',MLST$Sample) #Tree Name
+#ST 258
+MLST$ST_258 <-  ifelse(MLST$ST %in% c("258","Novel*","ND"), "ST258", "Other ST") 
+# MLST Keep Relevant Data (Remove MLST Alleles)
+MLST_final <- MLST %>% select(tip_name,isolate_no,ST,ST_258)
+# Add Rownames to Dataset 
+rownames(MLST_final) <- MLST_final$tip_name
+
+# Clinical Data
+CRKP_metadata <- as.data.frame(read_xls('./Analysis/Antibiotic_resistance/data/459_patients_data_for_posting.xls'))
+#Add Date
+CRKP_metadata$CA_LTACH <- ifelse(CRKP_metadata$state == "CA",CRKP_metadata$LTACH,"Other")
+CRKP_metadata$Date <- as.Date(CRKP_metadata$Cx_date)
+CRKP_metadata$second_half <-  ifelse(CRKP_metadata$Date >= "2015-01-28","Second Half","First Half")
+# Add Rownames to Dataset
+rownames(CRKP_metadata) <- paste0('PCMP_H',CRKP_metadata$isolate_no)
+
+
+# Load Isolate Sensititire Data
+setwd("~/Desktop/gl_mount/")
+#Raw MIC Data
+SENSITITRE <- as.data.frame(read_excel("./Analysis/Antibiotic_resistance/data/SENSITITRE MICs.xlsx", range = "B1:N460"))
+#Edit Data for Data Merging Assistance
+SENSITITRE$isolate_no <- str_remove(gsub('CRKP_','',SENSITITRE$ISOLATES),"^0+") 
+#Rownames
+rownames(SENSITITRE) <- paste0('PCMP_H',SENSITITRE$isolate_no)
+
+
+# Generate Resisatnce Phenotype Data
+# Follwing Criteria Sent Via Helen in August 2021. Abbreviations sent via Helen in October 2021.
+#Colistin (COL) [Intermediate = non-susceptible]
+#intermediate (MIC≤2)   
+#resistant (MIC≥4)  
+
+
+# Convert SENSITITRE MICS to Resistance Phenotypes
+# Ceftazidime-avibactam
+SENSITITRE$CZA_Cat <- ifelse(SENSITITRE$CZA %in% c("≤0.25/4","0.5/4","1/4","2/4","4/4","8/4"),"S",ifelse(SENSITITRE$CZA %in% c("16/4","32/4"),"R","I"))
+# Meropenem-vaborbactam
+SENSITITRE$MEV_Cat <- ifelse(SENSITITRE$MEV %in% c("≤0.25/8","0.5/8","1/8","2/4","2/8","4/8"),"S",ifelse(SENSITITRE$MEV =="8/8","I","R"))
+# Imipenem-relebactam 
+SENSITITRE$IMK_Cat <- ifelse(SENSITITRE$IMK %in% c("≤0.25/4","0.5/4","1/4"),"S",ifelse(SENSITITRE$IMK =="2/4","I","R"))
+# Tigecycline
+SENSITITRE$TGC_Cat <- ifelse(SENSITITRE$TGC %in% c("≤0.25","0.25","0.5","1","2"),"S",ifelse(SENSITITRE$TGC =="4","I","R"))
+# Colistin
+SENSITITRE$COL_Cat <- ifelse(SENSITITRE$COL %in% c("≤0.25","0.5","1","2"),"I","R")
+# Amikacin
+SENSITITRE$AMI_Cat <- ifelse(SENSITITRE$AMI %in% c("≤0.5","1","2","4","8","16"),"S",ifelse(SENSITITRE$AMI =="32","I","R"))
+# Plazomicin
+SENSITITRE$PLZ_Cat <- ifelse(SENSITITRE$PLZ %in% c("≤0.5","0.5","1","2"),"S",ifelse(SENSITITRE$PLZ =="4","I","R"))
+
+
+# Generate Final Resistance Dataset
+#Notes:  
+#  (1) Need to Dichotomize MIC Categories to Susceptibility Phenotype
+#(2) For Colistin Resistance, Intermediate MIC is Classified as Non-Susceptible
+
+#Dichotomize Dataset
+SENSITITRE_Res <- SENSITITRE %>% dplyr::select(CZA_Cat,MEV_Cat,IMK_Cat,TGC_Cat,COL_Cat,AMI_Cat,PLZ_Cat)
+#Convert Yes/No to 1/0
+SENSITITRE_Res_dichot <- as.data.frame(cbind(
+  ifelse(as.data.frame(SENSITITRE %>% dplyr::select(CZA_Cat,MEV_Cat,IMK_Cat,TGC_Cat,AMI_Cat,PLZ_Cat)) == "S","Susceptible","Non-Susceptible"),
+  ifelse(as.data.frame(SENSITITRE %>% dplyr::select(COL_Cat)) == "I","Susceptible","Non-Susceptible")))
+#Column Names
+colnames(SENSITITRE_Res_dichot)<-gsub("_Cat","_dich",colnames(SENSITITRE_Res_dichot))
+#Arrange
+SENSITITRE_Res_dichot$isolate_no <- SENSITITRE$isolate_no #isolate number for merging
+
+#Final 
+SENSITITRE_final <- SENSITITRE_Res_dichot %>% select(isolate_no,CZA_dich,MEV_dich,IMK_dich,TGC_dich,COL_dich,AMI_dich,PLZ_dich)
+
+# Merge Dataset
+
+# Generate Master Metadata Dataset (n=459)
+CRKP_meta_ST<- merge.data.frame(CRKP_metadata,MLST_final,by='isolate_no')
+CRKP_metadata_master<-merge.data.frame(CRKP_meta_ST,SENSITITRE_final,by='isolate_no',all.x=TRUE)
+
+# Drop Grouped Isolates (PCMP_473 & PCMP_472) from Master Dataset (n=458)
+CRKP_master_nomiss <- subset(CRKP_metadata_master,isolate_no != "472" & isolate_no != "473") 
+
+#Simplify for Session 7
+CRKP_CC_metadata <- CRKP_master_nomiss %>% select(isolate_no, LTACH, Region, source, ST, COL_dich)
+colnames(CRKP_CC_metadata) <- c("isolate_no","LTACH","Region","Source","ST","Colistin")
+CRKP_CC_metadata$Source<- recode(CRKP_CC_metadata$Source, 
+                            blood = "Blood",
+                            resp = "Respiratory",
+                            urine = "Urine",
+                            wound = "Wound"
+                            )
+
+library(writexl)
+write_xlsx(CRKP_CC_metadata,'~/Documents/Session_7/CRKP_metadata.xlsx')
