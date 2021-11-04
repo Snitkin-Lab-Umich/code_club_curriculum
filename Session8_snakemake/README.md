@@ -2,3 +2,4 @@
 
 Getting started with Snakemake workflows for automated bioinformatics analysis.
 
+[![Binder](https://mybinder.org/v2/gh/alipirani88/snakemake_teaser/HEAD)
