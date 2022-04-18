@@ -80,42 +80,45 @@ library(tidyr)
                        color = guide_legend(override.aes = list(size = 0.5)))
               
               
-# # 3) Facet predicted ST plot with expected ST plot
-#     # Merge actual data with predicted data, based on test strain.
-# facet_data <-left_join(long3, MLST2, by="test_strain")
-# facet_data<-facet_data[order(facet_data$test_strain),]
-# 
-#     # Convert facet_data into longer dataset
-# long_fd<-gather(facet_data, "rel_abd", "rel_abd_value", rel_abundance, actual_rel_abd)
-# long_fd<-gather(long_fd, "ST", "ST_value", ST, actual_ST)
-# long_fd<-long_fd [-c(153:456), ]
-# long_fd<-long_fd[order(long_fd$test_strain, long_fd$rel_abd_value),]
+# 3) Facet predicted ST plot with expected ST plot
+    # Merge actual data with predicted data, based on test strain.
+facet_data <-left_join(long3, MLST2, by="test_strain")
+facet_data<-facet_data[order(facet_data$test_strain),]
+
+    # Convert facet_data into longer dataset
+long_fd<-gather(facet_data, "rel_abd", "rel_abd_value", rel_abundance, actual_rel_abd)
+long_fd<-gather(long_fd, "ST", "ST_value", ST, actual_ST)
+long_fd<-long_fd [-c(153:456), ]
+long_fd<-long_fd[order(long_fd$test_strain, long_fd$rel_abd_value),]
 # 
 
 # 
-#   # Assign name to plot with combined data
-              # pl<-ggplot(long_fd, aes(x=test_strain, y=rel_abd_value, fill = ST_value))  +
-              #   geom_bar(position="fill", stat="identity")+ xlab("Test Genome") +
-              #   ylab("Relative Abundance") + labs(fill = "ST") +
-              #   ggtitle("Limited Genomes Core Variants Reference Database") +
-              #   theme(axis.text.x = element_text(angle = 45, hjust=1, size=10),
-              #         axis.text.y=element_text(size=10),
-              #         axis.title = element_text(size=10),
-              #         legend.key.size = unit(0.75, 'lines'),
-              #         legend.text=element_text(size=4),
-              #         strip.text.x = element_text(size = 10),
-              #         legend.title=element_text(size=4))+
-              #   guides(shape = guide_legend(override.aes = list(size = 0.5)), 
-              #          color = guide_legend(override.aes = list(size = 0.5)))
-              
+  # Assign name to plot with combined data
+pl<-ggplot(long_fd, aes(x=test_strain, y=rel_abd_value, fill = ST_value))  +
+  geom_bar(position="fill", stat="identity")+ xlab("Test Genome") +
+  ylab("Relative Abundance") + labs(fill = "ST") +
+  ggtitle("Limited Genomes Core Variants Reference Database") +
+  theme(axis.text.x = element_text(angle = 45, hjust=1, size=10),
+        axis.text.y=element_text(size=10),
+        axis.title = element_text(size=10),
+        legend.key.size = unit(0.75, 'lines'),
+        legend.text=element_text(size=4),
+        strip.text.x = element_text(size = 10),
+        legend.title=element_text(size=4))+
+  guides(shape = guide_legend(override.aes = list(size = 0.5)),
+         color = guide_legend(override.aes = list(size = 0.5)))
 
-#     # Assign names for strip labels
-# abd.labs<-c()
-# names(abd.labs)<-c()
-# st.labs<-c()
-# names(st.labs)<-c()
-# 
-# limited_genomes_facet_plot<-pl+facet_wrap()
+
+    # Assign names for strip labels
+abd.labs<-c("Expected", "Predicted")
+names(abd.labs)<-c("actual_rel_abd", "rel_abundance")
+st.labs<-c("ST","ST")
+names(st.labs)<-c("actual_ST","ST")
+
+limited_genomes_facet_plot<-pl+facet_wrap(vars(rel_abd, ST),
+                                          ncol=1,
+                                          labeller=labeller(rel_abd=abd.labs,
+                                                            ST=st.labs))
 
 
 
