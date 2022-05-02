@@ -1,0 +1,168 @@
+---
+title: "Session_7_part_2"
+author: "Kyle Gontjes"
+date: "5/2/2022"
+output: html_document
+---
+
+## R Markdown Setup Chunk
+```{r setup}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(fig.width = 15, fig.height = 10)
+knitr::opts_chunk$set(comment = NA)
+# Change this working directory to be your location of the session 7 folder
+knitr::opts_knit$set(root.dir="~/Desktop/code_club_curriculum/Session_7/") 
+```
+
+## Agenda
+0. Set up the R Environment
+1. Load data
+2. Perform Initial Visualization of the Phylogeny Using the ggtree Package
+3. Load in Previous Session's Final ST258 Tree, Data, and Visualization
+4. Try Different Phylogeny Layouts
+5. Re-do Session 7's Phylogeny as Circular Tree Using Theme Objects
+
+## Part 0: Set up the R Environment   
+Note: This code chunk loads the required packages for this code club session. Instead of using the library function consecutively for each package, I often use this lapply function strategy to load my packages at the start of my R markdown file.
+```{r}
+# Packages used 
+  # Cran packages
+  cran_packages <- c("BiocManager","phytools","ggplot2","tidyverse","readxl","cowplot","printr","randomcoloR","magick")
+  # BiocManager packages
+  BiocManager_packages <- c("ggtree","ggnewscale")
+  
+# Functions to install packages (if not installed already)
+  # lapply(cran_packages,install.packages,character.only=T)
+  # lapply(BiocManager_packages,BiocManager::install,character.only=T)
+
+# Functions to load packages
+lapply(cran_packages,library,character.only=T)
+lapply(BiocManager_packages,library,character.only=T)
+```
+
+## Part 1: Load the .treefile Into the R Environment
+```{r}
+# Note: If you choose to work in the console and not knit your .Rmd, set your working directory to YOUR location of the session 7 folder
+setwd("~/Documents/code_club_curriculum/Session_7/")
+# Load .treefile using the ape package ()
+tree <- read.tree(file="./2021_02_12_08_34_28_KPNIH1_genome_aln_w_alt_allele_unmapped.treefile")
+```
+
+## Part 2: Perform Initial Visualization of the Tree Using ggtree
+#### See the ggtree full vignette at "https://yulab-smu.top/treedata-book/"
+```{r}
+# Visualize tree object using the ggtree function
+  # Vignette
+  vignette("ggtree")
+  #ggtree function help page
+  ??ggtree
+  # Visualize tree using ggtree
+  ggtree(tree)
+```
+
+## Part 3: Load in Previous Session's Final ST258 Tree, Data, and Visualization
+```{r}
+# Load ST258 Datset
+CRKP_258 <- readRDS("./CRKP_258_sorted.RDS")
+#Load ST258 tree
+tree_258 <- read.tree("./st_258.treefile")
+  # Visualize tree using ggtree
+  ggtree(tree_258)
+#Load Initial Visualization
+initial_visualizaiton <- readRDS("./final_session_7_phylogeny.RDS")
+  #View initial visualization
+  initial_visualizaiton
+  
+#Question: Can Anyone think of ways to improve the figure?
+```
+
+## Part 4: Try Different Phylogeny Layouts
+```{r}
+# Review: Using Different Tree Layouts
+  # Default (layout = "rectangular")
+  ggtree(tree_258)
+  # Slanted
+  ggtree(tree_258,layout = "slanted")
+  # Dendogran
+  ggtree(tree_258,layout = "dendrogram")
+  # Ape
+  ggtree(tree_258,layout = "ape")
+  # No Branch Length
+  ggtree(tree_258,layout="rectangular",branch.length = 'none')
+
+# Circular Phylogenies
+ggtree(tree_258,layout = "circular")
+  #Add Scale to Tree
+  ggtree(tree_258,layout = "circular") + geom_treescale()
+  #Ladderize
+  ggtree(tree_258,layout = "circular",ladderize=T)  + geom_treescale()
+```
+
+## Part 5: Re-do Session 7's Phylogeny as Circular Tree with Environments
+# Task 1: Add Source Using gheatmap
+# Task 2: Create Consistent Theme
+# Task 3: Add Colistin Resistance
+```{r}
+# Previous Tree
+initial_visualizaiton
+
+#Re-Introducing ggtree scales
+  help(ggnewscale)
+  help(scale_fill_manual)
+
+#Source Scale
+  #Values
+  table(CRKP_258$Source)
+  #Colors
+  source_colors <- distinctColorPalette(4)
+    # View Color Palette Chosen Using Pie Function
+    source_colors
+    pie(rep(1,length(source_colors)),col=source_colors)
+  #Create Named Vector
+  palette_source = c("Blood" = source_colors[[1]],"Respiratory" = source_colors[[2]],"Urine" = source_colors[[3]],"Wound"=source_colors[[4]])
+  palette_source
+
+#Initial Phylogeny
+p0 <- ggtree(tree_258,layout="circular")
+
+#P1 - Source Gheatmap
+p1 <-  gheatmap(p0,CRKP_258 %>% select(Source),colnames_position="top", colnames_angle=45, colnames_offset_y=0.25, width=.15,hjust=0,font.size=5,color=NA) + scale_fill_manual(values=palette_source,name="Source") + ylim(NA,500) 
+  #Use Theme to Put Legend at Bottom
+  p1 + theme(legend.position="bottom")
+ 
+#Option #2: Create Legend Object
+source_legend <- scale_fill_manual(breaks=c("Blood","Respiratory","Urine","Wound"),values = c(2,3,4,6),labels=c("Blood","Resp","Urine","Wound"),name = "Source",guide = guide_legend(title.position = "top", label.position = "right",ncol=2,order=1))
+
+p1.1 <- gheatmap(p0,CRKP_258 %>% select(Source),colnames_position="top", colnames_angle=45, colnames_offset_y=0.25, width=.15,hjust=0,font.size=5,color=NA) + source_legend + theme(legend.position="bottom") + ylim(NA,500) 
+
+#Task #2: Create Consistent Theme
+consistent_theme <- theme(legend.position = 'bottom',legend.direction="horizontal", legend.justification = "center", legend.key = element_rect(colour = c('black')))
+p1
+  #Add Consistent Theme + Source Legend to Phylogeny
+  p1.2 <- p1 + source_legend + consistent_theme
+  p1.2
+
+#Task 3: Add Colistin Resistance
+#Use new_scale_fill to add new scale for colistin data
+p2 <- p1.2 + new_scale_fill()
+p3 <- gheatmap(p2, CRKP_258 %>% select(Colistin), colnames_position="top",  colnames_angle=45, colnames_offset_y=0.25, width=.15, hjust=0, font.size=5, offset=.0000055)  + consistent_theme + ylim(NA, 500)
+p3
+
+#Make Black & White Scale
+  #Values
+  table(CRKP_258$Colistin)
+  #scale
+  colistin_scale <- scale_fill_manual(breaks = c("Non-Susceptible","Susceptible"),values=c("black","white"),labels = c("Non-Susceptible","Susceptible"),name="Resistance Profile",guide = guide_legend(title.position = "top", label.position = "right",nrow=2,order=2))
+
+#Final Tree with colistin scale
+final_phylogeny <- p3 + colistin_scale + consistent_theme + geom_treescale(x=.00001,y=-25,offset=1,fontsize=3)
+
+#Trim Circular Plot Using Magickr
+f <- tempfile(fileext=".png")
+ggsave(filename = f, plot = final_phylogeny, width=7, height=7)
+
+x <- image_read(f, density=300)
+y <- image_trim(x)
+y
+```

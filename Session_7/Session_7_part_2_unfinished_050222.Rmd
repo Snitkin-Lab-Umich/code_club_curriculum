@@ -1,0 +1,144 @@
+---
+title: "Session_7_part_2"
+author: "Kyle Gontjes"
+date: "5/2/2022"
+output: html_document
+---
+
+## R Markdown Setup Chunk
+```{r setup}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(fig.width = 15, fig.height = 10)
+knitr::opts_chunk$set(comment = NA)
+# Change this working directory to be your location of the session 7 folder
+knitr::opts_knit$set(root.dir="~/Desktop/code_club_curriculum/Session_7/") 
+```
+
+## Agenda
+0. Set up the R Environment
+1. Load data
+2. Perform Initial Visualization of the Phylogeny Using the ggtree Package
+3. Load in Previous Session's Final ST258 Tree, Data, and Visualization
+4. Try Different Phylogeny Layouts
+5. Re-do Session 7's Phylogeny as Circular Tree Using Theme Objects
+
+## Part 0: Set up the R Environment   
+Note: This code chunk loads the required packages for this code club session. Instead of using the library function consecutively for each package, I often use this lapply function strategy to load my packages at the start of my R markdown file.
+```{r}
+# Packages used 
+  # Cran packages
+  cran_packages <- c("BiocManager","phytools","ggplot2","tidyverse","readxl","cowplot","printr","randomcoloR","magick")
+  # BiocManager packages
+  BiocManager_packages <- c("ggtree","ggnewscale")
+  
+# Functions to install packages (if not installed already)
+  # lapply(cran_packages,install.packages,character.only=T)
+  # lapply(BiocManager_packages,BiocManager::install,character.only=T)
+
+# Functions to load packages
+lapply(cran_packages,library,character.only=T)
+lapply(BiocManager_packages,library,character.only=T)
+```
+
+## Part 1: Load the .treefile Into the R Environment
+```{r}
+# Note: If you choose to work in the console and not knit your .Rmd, set your working directory to YOUR location of the session 7 folder
+setwd("~/Documents/code_club_curriculum/Session_7/")
+# Load .treefile using the ape package
+```
+
+## Part 2: Perform Initial Visualization of the Tree Using ggtree
+#### See the ggtree full vignette at "https://yulab-smu.top/treedata-book/"
+```{r}
+# Visualize tree object using the ggtree function
+  #Vignette
+  vignette("ggtree")
+  #ggtree function help page
+  ??ggtree
+  #Visualize tree using ggtree
+  
+```
+
+## Part 3: Load in Previous Session's Final ST258 Tree, Data, and Visualization
+```{r}
+#Load ST258 Datset
+
+#Load ST258 tree
+
+  #Visualize tree using ggtree
+
+#Load Initial Visualization
+
+  #View initial visualization
+
+  
+#Question: Can Anyone think of ways to improve the figure?
+```
+
+## Part 4: Try Different Phylogeny Layouts
+```{r}
+# Review: Using Different Tree Layouts
+  # Default (layout = "rectangular")
+
+  # Slanted
+ 
+  # Dendogran
+ 
+  # Ape 
+
+  # No Branch Length
+
+# Circular Phylogeny
+
+  #Add Scale to Tree
+
+  #Ladderize
+
+```
+
+## Part 5: Re-do Session 7's Phylogeny as Circular Tree with Environments
+# Task 1: Add Source Using gheatmap
+# Task 2: Create Consistent Theme
+# Task 3: Add Colistin Resistance
+```{r}
+# Previous Tree
+
+
+#Re-Introducing ggtree scales
+  help(ggnewscale)
+  help(scale_fill_manual)
+
+#Source Scale
+  #Values
+  table()
+  #Colors
+  
+    # View Color Palette Chosen Using Pie Function
+  
+  #Create Named Vector
+
+#Initial Phylogeny
+
+#P1 - Source Gheatmap
+  
+  #Use Theme to Put Legend at Bottom
+ 
+###Option #2: Create Legend Object
+
+##Task #2: Create Consistent Theme
+  
+  #Add Consistent Theme + Source Legend to Phylogeny
+
+#Task 3: Add Colistin Resistance
+#Use new_scale_fill to add new scale for colistin data
+
+#Make Black & White Scale
+  #Values
+  table()
+  #scale
+
+#Final Tree with colistin scale
+
+###TIP: Trim Circular Plot Using Magickr
+```
